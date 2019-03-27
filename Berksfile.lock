@@ -1,0 +1,45 @@
+DEPENDENCIES
+  elasticsearch
+  java
+  nginx
+  seven_zip (< 3.1.0)
+  sous_vide
+    path: cookbooks/sous_vide
+  tomcat
+
+GRAPH
+  apt (7.1.1)
+  ark (4.0.0)
+    build-essential (>= 0.0.0)
+    seven_zip (>= 0.0.0)
+  build-essential (8.2.1)
+    mingw (>= 1.1)
+    seven_zip (>= 0.0.0)
+  chef-sugar (5.0.1)
+  elasticsearch (4.0.5)
+    apt (>= 0.0.0)
+    ark (>= 0.0.0)
+    chef-sugar (>= 0.0.0)
+    yum (>= 0.0.0)
+  homebrew (5.0.8)
+  java (3.2.1)
+    homebrew (>= 0.0.0)
+    windows (>= 0.0.0)
+  mingw (2.1.0)
+    seven_zip (>= 0.0.0)
+  nginx (9.0.0)
+    build-essential (>= 5.0)
+    ohai (>= 4.1.0)
+    yum-epel (>= 0.0.0)
+  ohai (5.2.5)
+  seven_zip (3.0.0)
+    windows (>= 0.0.0)
+  sous_vide (0.0.1)
+    elasticsearch (>= 0.0.0)
+    java (>= 0.0.0)
+    nginx (>= 0.0.0)
+    tomcat (>= 0.0.0)
+  tomcat (3.2.0)
+  windows (5.3.0)
+  yum (5.1.0)
+  yum-epel (3.3.0)

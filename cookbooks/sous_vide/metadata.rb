@@ -1,0 +1,10 @@
+name             "sous_vide"
+maintainer       "robuye"
+maintainer_email "rulejczyk@gmail.com"
+description      "This cookbook contains recipes for use in integration tests exclusively"
+version          "0.0.1"
+
+depends "java"
+depends "elasticsearch"
+depends "tomcat"
+depends "nginx"

@@ -1,0 +1,98 @@
+---
+<% if (ARGV[0] == "converge") %>
+transport:
+  name: rsync
+<% end %>
+
+driver:
+  name: docker
+  use_sudo: false
+  provision_command:
+    # prevent APT from deleting the APT folder
+    - rm /etc/apt/apt.conf.d/docker-clean
+    - apt-get install -y -q apt-transport-https rsync
+    # allow test-kitchen to use root user (connects via ssh)
+    - sed -i 's/prohibit-password/yes/' /etc/ssh/sshd_config
+    # disable systemd since it doesn't work in docker
+    - ln -sf /bin/true /bin/systemctl
+    # install chef-client as part of the image, save time in the runtime
+    - curl -LO https://omnitruck.chef.io/install.sh && bash ./install.sh -v 12.17.44 && rm install.sh
+    - ln /opt/chef/bin/chef-client /bin/chef-client
+  username: root
+  password: root
+
+verifier:
+  sudo: false
+
+provisioner:
+  install_strategy: 'skip'
+
+platforms:
+  - name: ubuntu-16.04
+  - name: ubuntu-18.04
+
+suites:
+  - name: default
+    includes:
+      - ubuntu-16.04
+    driver:
+      hostname: elasticsearch
+      instance_name: elasticsearch
+      forward:
+        - "5601:5601" # kibana
+        - "9200:9200" # es
+    run_list:
+      - sous_vide::install
+      - sous_vide::default
+    attributes:
+      kitchen:
+        roles:
+          - elasticsearch
+      java:
+        jdk_version: 8
+      elasticsearch:
+        install:
+          version: "6.6.2"
+  - name: tomcat
+    includes:
+      - ubuntu-18.04
+      - ubuntu-16.04
+    driver:
+      links:
+        - elasticsearch
+    run_list:
+      - sous_vide::install
+      - sous_vide::tomcat
+    attributes:
+      kitchen:
+        roles:
+          - tomcat-example
+      java:
+        jdk_version: 8
+  - name: nginx
+    includes:
+      - ubuntu-16.04
+    run_list:
+      - sous_vide::install
+      - sous_vide::nginx
+    attributes:
+      kitchen:
+        roles:
+          - nginx-example
+      nginx:
+        install_method: "source"
+        modules:
+          - nginx::headers_more_module
+          - nginx::http_auth_request_module
+          - nginx::http_echo_module
+          - nginx::http_geoip_module
+          - nginx::http_gzip_static_module
+          - nginx::http_realip_module
+          - nginx::http_v2_module
+          - nginx::http_ssl_module
+          - nginx::http_stub_status_module
+          - nginx::naxsi_module
+          - nginx::ngx_devel_module
+          - nginx::ngx_lua_module
+          - nginx::openssl_source
+          - nginx::upload_progress_module
