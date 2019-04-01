@@ -33,7 +33,7 @@ Feed it to Kibana, save to file or print at the end of chef-client run. `SousVid
 Add to your recipe:
 
 ```ruby
-chef_gem "sous_vide" do
+chef_gem "chef_sous_vide" do
   action :install
 end
 

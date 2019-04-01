@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    sous_vide (0.1.0)
+    chef_sous_vide (0.1.0)
       chef (~> 12.17.44)
 
 GEM
@@ -285,12 +285,12 @@ PLATFORMS
 DEPENDENCIES
   berkshelf
   bundler (~> 1.17)
+  chef_sous_vide!
   cucumber (~> 3.1.2)
   kitchen-docker
   kitchen-transport-rsync
   pry
   rake (~> 10.0)
-  sous_vide!
   test-kitchen
 
 BUNDLED WITH

@@ -3,7 +3,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require "sous_vide/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "sous_vide"
+  spec.name = "chef_sous_vide"
   spec.version = SousVide::VERSION
   spec.authors = ["robuye"]
   spec.email = ["rulejczyk@gmail.com"]
@@ -22,7 +22,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "chef", "~> 12.17.44"
+  spec.add_dependency "chef"
 
   spec.add_development_dependency "bundler", "~> 1.17"
   spec.add_development_dependency "rake", "~> 10.0"

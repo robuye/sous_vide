@@ -1,7 +1,7 @@
 # This recipe installs and enables SousVide.
 node.automatic["roles"] = node["kitchen"]["roles"]
 
-chef_gem "sous_vide" do
+chef_gem "chef_sous_vide" do
   compile_time true
   action :install
 end
