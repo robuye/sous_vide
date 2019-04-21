@@ -2,6 +2,9 @@
 
 **=======> SousVide is not ready to use. <=======**
 
+
+![SousVide example dashboard](media/kibana-dashboard.png?raw=true)
+
 SousVide is a Chef Handler you can use to collect & visualize `chef-client` converge process. It receives event data from `chef-client` and keeps track of the converge process. It's essentially a stream parser hooked into `Chef::EventDispatch`.
 
 At the end you will have an extensive report about events occured during the run.
@@ -127,6 +130,8 @@ Run `bundle exec kitchen converge default` to provision a docker container with 
 Once `chef-client` finishes converging you can access a Kibana dashboard and see all the information SousVide collected during the run at `http://localhost:5601/app/kibana#/dashboard/cba01d00-5383-11e9-90a1-a5ec6cbc0c49`.
 
 There are more example kitchen configurations you can converge and see the runs in Kibana. You can change the default recipe, converge again and see it in Kibana.
+
+[![asciicast](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX.svg)](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX)
 
 ## Contributing
 
