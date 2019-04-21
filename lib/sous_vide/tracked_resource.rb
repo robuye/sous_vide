@@ -1,31 +1,67 @@
 module SousVide
-  # == SousVide::TrackedResource
+  # It is a very simple data structure SousVide uses to capture information about resource
+  # execution.
   #
-  # This is a very simple data structure SousVide uses to capture interesting
-  # information.
+  # @see https://www.rubydoc.info/gems/chef/Chef/Resource
   class TrackedResource
-    attr_accessor :type,
-                  :name,
-                  :action,
-                  :status,
-                  :duration_ms,
-                  :guard_description,
-                  :execution_phase,
-                  :execution_order,
-                  :notifying_resource,
-                  :notification_type,
-                  :before_notifications,
-                  :immediate_notifications,
-                  :delayed_notifications,
-                  :retries,
-                  :error_output,
-                  :error_source,
-                  :cookbook_name,
-                  :cookbook_recipe,
-                  :source_line,
-                  :started_at,
-                  :completed_at
 
+    attr_accessor :type
+
+    attr_accessor :name
+
+    # Action executed on this resource.
+    attr_accessor :action
+
+    # Result of the action, ie. "updated", "skipped", ...
+    attr_accessor :status
+
+    attr_accessor :duration_ms
+
+    attr_accessor :guard_description
+
+    # SousVide run-phase when this resource was executed.
+    attr_accessor :execution_phase
+
+    # Resource execution order. Takes into account notifications and does not reflect resource.
+    # order on the run list.
+    attr_accessor :execution_order
+
+    # Resource that triggered this execution. Delayed notifications do not have this.
+    attr_accessor :notifying_resource
+
+    attr_accessor :notification_type
+
+    # Number of before notifications attached to this resource.
+    attr_accessor :before_notifications
+
+    # Number of immediate notifications attached to this resource.
+    attr_accessor :immediate_notifications
+
+    # Number of delayed notifications attached to this resource.
+    attr_accessor :delayed_notifications
+
+    # Number of retries.
+    attr_accessor :retries
+
+    # Last error output if available. This can be populated when resource failed and when resource
+    # succeed after a retry.
+    attr_accessor :error_output
+
+    # Resource definition that triggered the error.
+    attr_accessor :error_source
+
+    attr_accessor :cookbook_name
+
+    attr_accessor :cookbook_recipe
+
+    attr_accessor :source_line
+
+    attr_accessor :started_at
+
+    attr_accessor :completed_at
+
+    # Chef API resource. It is used for comparsion only.
+    # @api private
     attr_accessor :chef_resource_handle
 
     def initialize(name:, action:, type:)
@@ -42,10 +78,14 @@ module SousVide
       @error_source = nil
     end
 
+    # String and human friendly represtnation of the resource
+    # @return [String]
     def to_s
       "#{@type}[#{@name}]##{@action}"
     end
 
+    # Serializes the resource to hash
+    # @return [Hash]
     def to_h
       {
         chef_resource: "#{@type}[#{@name}]##{@action}",

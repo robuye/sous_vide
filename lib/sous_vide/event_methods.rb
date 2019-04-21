@@ -7,13 +7,15 @@ module SousVide
   # 2. resource_* events (possibly multiple)
   # 3. resource_action_complete
   #
-  # The code is intentionally procedural and explicit. If :resource_action_start assigned
-  # @processing_now only then other events will work. :resource_action_completed unassigns
-  # @processing_now so all events will be ignored until :resource_action_start is called
-  # again.
+  # If :resource_action_start assigned @processing_now only then other methods will perform any
+  # processing.
+  #
+  # :resource_action_completed unassigns @processing_now so all events will be ignored until
+  # :resource_action_start is called again.
+  #
+  # @see https://www.rubydoc.info/gems/chef/Chef/EventDispatch/Base
   module EventMethods
-    # This hook will always fire whenever chef is about to converge a resource, including why_run
-    # mode, notifications or skipped resources.
+    # Called before action is executed on a resource.
     def resource_action_start(new_resource, action, notification_type, notifying_resource)
       if nested?(new_resource) # ignore nested resources
         new_r_name = "#{new_resource.resource_name}[#{new_resource.name}]##{action}"
@@ -53,6 +55,7 @@ module SousVide
       true
     end
 
+    # Called after a resource has been completely converged, but only if modifications were made.
     def resource_updated(new_resource, _action)
       return false if @processing_now.nil? || nested?(new_resource) # ignore nested resources
 
@@ -61,8 +64,7 @@ module SousVide
       true
     end
 
-    # Resource is skipped when a guard instruction stops the converge process or when
-    # `action :nothing` is used (it's a guard too).
+    # Called when a resource action has been skipped b/c of a conditional.
     def resource_skipped(new_resource, _action, conditional)
       return false if @processing_now.nil? || nested?(new_resource) # ignore nested resources
 
@@ -72,6 +74,7 @@ module SousVide
       true
     end
 
+    # Called when a resource has no converge actions, e.g., it was already correct.
     def resource_up_to_date(new_resource, _action)
       return false if @processing_now.nil? || nested?(new_resource) # ignore nested resources
 
@@ -80,6 +83,7 @@ module SousVide
       true
     end
 
+    # Called when a resource action has been completed.
     def resource_completed(new_resource)
       return false if @processing_now.nil? || nested?(new_resource) # ignore nested resources
 
@@ -110,7 +114,7 @@ module SousVide
       # why-run mode and notifications are not in natural order and must not move the cursor.
       #
       # Having it pointing ahead is relevant because current resource has just been converged
-      # (technically 'failed') and it is not 'unprocessed'.
+      # (maybe 'failed') and it is not 'unprocessed'.
       if !@processing_now.notifying_resource && # not notified
          !::Chef::Config[:why_run] &&           # not why-run
          @run_phase == "converge"               # only converge phase
@@ -124,6 +128,7 @@ module SousVide
       true
     end
 
+    # Called when a resource fails and will not be retried.
     def resource_failed(new_resource, _action, exception)
       return false if @processing_now.nil? || nested?(new_resource) # ignore nested resources
 
@@ -134,6 +139,8 @@ module SousVide
       true
     end
 
+    # Called when a resource fails, but will retry.
+    #
     # Resources with retries can succeed on subsequent attempts or ignore_failure option may be
     # set and it's the only place we can capture intermittent errors.
     #
@@ -148,6 +155,7 @@ module SousVide
       true
     end
 
+    # Called before convergence starts
     def converge_start
       debug("Received :converge_start")
       debug("Changed run phase to 'converge'.")
@@ -155,6 +163,7 @@ module SousVide
       @run_name ||= [@run_started_at, @chef_node_role, @chef_node_ipv4, @run_id].join(" ")
     end
 
+    # Called when the converge phase is finished (success)
     def converge_complete
       debug("Received :converge_completed")
       @run_success = true
@@ -162,6 +171,8 @@ module SousVide
       send_to_output!
     end
 
+
+    # Called if the converge phase fails
     def converge_failed(_exception)
       debug("Received :converge_failed")
       @run_success = false
