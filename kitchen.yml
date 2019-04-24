@@ -41,6 +41,8 @@ suites:
       forward:
         - "5601:5601" # kibana
         - "9200:9200" # es
+      cap_add:
+        - IPC_LOCK
     run_list:
       - sous_vide::install
       - sous_vide::default
@@ -70,6 +72,9 @@ suites:
       java:
         jdk_version: 8
   - name: nginx
+    driver:
+      links:
+        - elasticsearch
     includes:
       - ubuntu-16.04
     run_list:

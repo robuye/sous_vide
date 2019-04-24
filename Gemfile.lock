@@ -1,8 +1,8 @@
 PATH
   remote: .
   specs:
-    chef_sous_vide (0.1.0)
-      chef (~> 12.17.44)
+    chef_sous_vide (0.2.0)
+      chef
 
 GEM
   remote: https://rubygems.org/
@@ -278,6 +278,7 @@ GEM
       rubyzip (~> 1.1)
       winrm (~> 2.0)
     wmi-lite (1.0.2)
+    yard (0.9.19)
 
 PLATFORMS
   ruby
@@ -292,6 +293,7 @@ DEPENDENCIES
   pry
   rake (~> 10.0)
   test-kitchen
+  yard
 
 BUNDLED WITH
    1.17.1

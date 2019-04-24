@@ -2,6 +2,9 @@
 
 **=======> SousVide is not ready to use. <=======**
 
+
+![SousVide example dashboard](media/kibana-dashboard.png?raw=true)
+
 SousVide is a Chef Handler you can use to collect & visualize `chef-client` converge process. It receives event data from `chef-client` and keeps track of the converge process. It's essentially a stream parser hooked into `Chef::EventDispatch`.
 
 At the end you will have an extensive report about events occured during the run.
@@ -24,7 +27,7 @@ Here's what SousVide will tell you:
   - simple counters for each type
   - notification type & notifying resource when available
 
-All this and more will be available in a simple JSON friendly data structure ready to serve anywhere you like.
+All this and more will be available in a flat JSON data structure.
 
 Feed it to Kibana, save to file or print at the end of chef-client run. `SousVide` comes with common outputs (see `SousVide::Outputs`) but you can write your own or even pass it a Proc.
 
@@ -37,8 +40,13 @@ chef_gem "chef_sous_vide" do
   action :install
 end
 
-require "sous_vide"
-SousVide::Handler.register(node.run_context)
+ruby_block "register sous handler" do
+  block do
+    require "sous_vide"
+    SousVide.register(node.run_context)
+  end
+  action :nothing
+end.run_action(:run)
 ```
 
 You should add these lines as early as possible. SousVide will not detect compile-time executions before it's registration, but otherwise it will work just fine (or just as one would expect).
@@ -81,19 +89,26 @@ Once SousVide is registered, it's for the most part up to you to consume the out
     "chef_run_started_at": "2019-04-01 11:46:18",
     "chef_run_completed_at": "2019-04-01 11:46:24",
     "chef_run_success": true
-  },
-
-  #...
+  }
 ]
 ```
 
-You can configure SousVide in the recipe:
+Example configuration for JsonHTTP:
 
 ```ruby
-require "sous_vide"
-json_http = SousVide::Outputs::JsonHTTP.new(url: "http://elasticsearch:3000")
-SousVide::Handler.instance.sous_output = json_http
-SousVide::Handler.register(node.run_context)
+chef_gem "chef_sous_vide" do
+  action :install
+end
+
+ruby_block "register sous handler" do
+  block do
+    require "sous_vide"
+    json_http = SousVide::Outputs::JsonHTTP.new(url: "http://elasticsearch:3000")
+    SousVide.sous_output = json_http
+    SousVide.register(node.run_context)
+  end
+  action :nothing
+end.run_action(:run)
 ```
 
 Open `cookbooks/sous_vide/recipes/install.rb` to see how to configure other outputs or use more than one.
@@ -115,6 +130,8 @@ Run `bundle exec kitchen converge default` to provision a docker container with 
 Once `chef-client` finishes converging you can access a Kibana dashboard and see all the information SousVide collected during the run at `http://localhost:5601/app/kibana#/dashboard/cba01d00-5383-11e9-90a1-a5ec6cbc0c49`.
 
 There are more example kitchen configurations you can converge and see the runs in Kibana. You can change the default recipe, converge again and see it in Kibana.
+
+[![asciicast](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX.svg)](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX)
 
 ## Contributing
 

@@ -13,15 +13,16 @@ ruby_block "register sous handler" do
     logger.level = Logger::DEBUG
     logger.formatter = proc {|_, _, _, message| "#{message}\n" }
 
-    SousVide::Handler.instance.logger = logger
+    SousVide.logger = logger
 
     es = SousVide::Outputs::JsonHTTP.new(url: "http://elasticsearch:3000", max_retries: 10, logger: logger)
     json_file = SousVide::Outputs::JsonFile.new(logger: logger)
     stdout = SousVide::Outputs::Logger.new(logger: logger)
-    multi = SousVide::Outputs::Multi.new(json_file, es, stdout)
-    SousVide::Handler.instance.sous_output = multi
+    multi = SousVide::Outputs::Multi.new(json_file, stdout, es)
 
-    SousVide::Handler.register(node.run_context)
+    SousVide.sous_output = multi
+
+    SousVide.register(node.run_context)
   end
   action :nothing
 end.run_action(:run)

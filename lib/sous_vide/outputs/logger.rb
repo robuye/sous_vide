@@ -1,13 +1,15 @@
 module SousVide
   module Outputs
-    # Prints the report to the logger (usually Chef logger).
+    # Prints the report to logger.
     #
-    #   Outputs::Logger.new
+    # @example
+    #   SousVide::Outputs::Logger.new
     class Logger
       def initialize(logger: nil)
         @logger = logger
       end
 
+      # Prints the report to logger.
       def call(run_data:, node_data:, resources_data:)
         log "=============== #{self.class.name} ==============="
         log ""
@@ -34,6 +36,8 @@ module SousVide
         log "Success:", run_data[:chef_run_success]
         log ""
       end
+
+      private
 
       def log(*args)
         message = args.compact.join(' ')

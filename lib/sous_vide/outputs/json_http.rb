@@ -6,16 +6,27 @@ module SousVide
   module Outputs
     # Makes a POST request to a configured endpoint. Logstash & Elasticsearch friendly format.
     #
+    # It uses Net::HTTP to perform requests, it can be customized via :http_client accessor.
+    #
+    # @example
+    #
     #   JsonHTTP.new(url: "http://localhost:9200/endpoint", max_retries: 10)
     class JsonHTTP
-      def initialize(url:, max_retries: 0, logger: nil)
+      # Provides access to Net::HTTP client object. Use it to enable SSL or pass your own client.
+      # @return [Net::HTTP]
+      attr_accessor :http_client
+
+      # @param max_retries [Fixnum] number retries across all requests made.
+      def initialize(url:, max_retries: 2, logger: nil)
         @endpoint = URI(url)
         @logger = logger
-
-        @max_retries = max_retries || 2
+        @retry = 0
+        @max_retries = max_retries
         @http_client = Net::HTTP.new(@endpoint.host, @endpoint.port)
       end
 
+      # Sends a POST request with a JSON payload using @http_client object per resource.
+      # @return (void)
       def call(run_data:, node_data:, resources_data:)
         log "=============== #{self.class.name} ==============="
         log ""
@@ -38,24 +49,26 @@ module SousVide
         log ""
       end
 
+      private
+
       def call_with_retries(nethttp_request)
-        _retry = 0
         begin
           @http_client.request(nethttp_request)
         rescue
-          if _retry < @max_retries
-            _retry += 1
+          if @retry < @max_retries
+            logger.warn("Request failed, retry #{@retry} of #{@max_retries}.")
+            @retry += 1
             sleep 2
             retry
           else
+            logger.error("Request failed, retry #{@retry} of #{@max_retries}. Abort.")
             raise
           end
         end
       end
 
       def log(*args)
-        message = args.compact.join(" ")
-        logger.info(message)
+        logger.info(args.compact.join(" "))
       end
 
       def logger

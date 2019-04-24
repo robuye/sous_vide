@@ -5,11 +5,8 @@ Feature: Event processing
     2. resource_* events (possibly multiple)
     3. resource_action_complete
 
-  Examples defined below execute various flows that we expect to see and then we verify state of
+  Examples defined here execute various flows and then we verify state of
   the handler and relevant properties of the processed resource.
-
-  Scenarios here are simple and focused on single resource.
-  `features/handler_processing.feature`.
 
   Background:
     Given Chef why-run mode is disabled
@@ -136,8 +133,6 @@ Feature: Event processing
     And there is "1" resources processed in total
 
   Scenario: out-of-bound events processing
-    Out-of-bound events if SousVide is enabled in middle of a resource, ie. inside "ruby_block".
-
     When I have a chef resource "execute[/bin/true]" with action "run"
     And I call "resource_up_to_date"
     And I call "resource_completed"
