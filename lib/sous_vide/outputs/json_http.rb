@@ -17,11 +17,11 @@ module SousVide
       attr_accessor :http_client
 
       # @param max_retries [Fixnum] number retries across all requests made.
-      def initialize(url:, max_retries: 0, logger: nil)
+      def initialize(url:, max_retries: 2, logger: nil)
         @endpoint = URI(url)
         @logger = logger
         @retry = 0
-        @max_retries = max_retries || 2
+        @max_retries = max_retries
         @http_client = Net::HTTP.new(@endpoint.host, @endpoint.port)
       end
 
