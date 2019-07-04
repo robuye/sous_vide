@@ -16,7 +16,7 @@ driver:
     # disable systemd since it doesn't work in docker
     - ln -sf /bin/true /bin/systemctl
     # install chef-client as part of the image, save time in the runtime
-    - curl -LO https://omnitruck.chef.io/install.sh && bash ./install.sh -v 12.17.44 && rm install.sh
+    - curl -LO https://omnitruck.chef.io/install.sh && bash ./install.sh -v 13.12.14 && rm install.sh
     - ln /opt/chef/bin/chef-client /bin/chef-client
   username: root
   password: root
