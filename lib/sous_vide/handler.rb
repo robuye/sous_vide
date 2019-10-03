@@ -131,12 +131,6 @@ module SousVide
     #
     # Compile-time resources defined before registration will not be included.
     #
-    # @note chef_handler resource does not support subscribing to :events. Chef.event_handler DSL
-    #  could be used but dealing with returns and exceptions in blocks is tricky. Using Chef API
-    #  and Ruby feels the most reliable.
-    #
-    # @todo see client.rb start_handlers as an option.
-    #
     # @example
     #   SousVide::Handler.register(node.run_context)
     #
@@ -155,7 +149,12 @@ module SousVide
       @resource_collection_cursor = 0
 
       @processed = []
+      @nested_queue = []
       @processing_now = nil
+
+      @current_event = nil
+      @current_action = nil
+      @previous_event = nil
 
       @run_started_at = Time.now.strftime("%F %T")
 
@@ -163,8 +162,7 @@ module SousVide
       @run_id = SecureRandom.uuid.split("-").first # => 596e9d00
       @run_phase = "compile"
 
-      @logger = ::Chef::Log
-      @sous_output = Outputs::Logger.new(logger: @logger)
+      @sous_output = Outputs::Logger.new(logger: logger)
     end
 
     # Chef-client run related attributes.
@@ -233,21 +231,9 @@ module SousVide
       tracked.cookbook_name = chef_resource.cookbook_name || "<Dynamically Defined Resource>"
       tracked.cookbook_recipe = chef_resource.recipe_name || "<Dynamically Defined Resource>"
       tracked.source_line = chef_resource.source_line || "<Dynamically Defined Resource>"
-      tracked.chef_resource_handle = chef_resource
       tracked
     end
 
-
-    # Tells if an event is related to the current SousVide resource. If not it's nested.
-    #
-    # Once a top level resource triggered :resource_action_start any events not related to it will
-    # be ignored by SousVide.
-    #
-    # @return (Boolean)
-    def nested?(chef_resource)
-      @processing_now &&
-        @processing_now.chef_resource_handle != chef_resource
-    end
 
     # Backfills unprocessed resources. This is called only if chef-client failed (:converge_failed
     # event). SousVide is now in "post-converge" run phase.
@@ -266,17 +252,15 @@ module SousVide
 
       # Pass unprocessed resources via  :resource_action_start and :resource_completed so
       # they will end up in @processed collection, but with status set to "unprocessed".
-      unprocessed.each do |tracked|
+      unprocessed.each do |chef_resource|
         resource_action_start(
-          tracked.chef_resource_handle, # new_resource
-          tracked.action,               # action
-          nil,                          # notification_type
-          nil                           # notifying_resource
+          chef_resource,        # new_resource
+          chef_resource.action, # action
+          nil,                  # notification_type
+          nil                   # notifying_resource
         )
 
-        resource_completed(
-          tracked.chef_resource_handle  # new_resource
-        )
+        resource_completed(chef_resource)
       end
     end
 
@@ -299,7 +283,8 @@ module SousVide
     def expand_chef_resources!
       @chef_run_context.resource_collection.flat_map do |chef_resource|
         Array(chef_resource.action).map do |action|
-          create(chef_resource: chef_resource, action: action)
+          chef_resource.action = action
+          chef_resource
         end
       end
     end
@@ -316,6 +301,45 @@ module SousVide
       attributes.reduce({}) do |memo, attribute|
         memo[attribute] = chef_resource.public_send(attribute)
         memo
+      end
+    end
+
+    # Logs an event received message to debug log, called from all resource event methods
+    #
+    # @param chef_resource [Chef::Resource]
+    # @param extra [Array<String>] text to append to the message
+    def log_event_received(chef_resource, *extra)
+      nice_name = "#{chef_resource.resource_name}[#{chef_resource.name}]##{@current_action}"
+      debug("Received :#{@current_event} on #{nice_name}.", *extra)
+    end
+
+    # Retrieves a resource from @nested_queue if there is any. Used to process nested resources as
+    # these will trigger resource event methods bypassing :resource_action_start.
+    def get_resource_from_nested_queue
+      if @nested_queue.any?
+        @processing_now = @nested_queue.pop
+        debug("Retrieved #{@processing_now} from the nested queue.")
+      end
+    end
+
+    # Events that don't go through :resource_action_start and are not nested cannot be processed
+    # and must be ignored. There will be no such events in general, except at the very beginning
+    # when SousVide was registered and missed it's own start event.
+    #
+    # Event methods will early return if this is true so we also set previous and current event
+    # as it would happen during normal processing, desipte the event being ignored (these instance
+    # variables represent received event, not necessary processed by SousVide).
+    #
+    # @param chef_resource [Chef::Resource]
+    def event_out_of_bound?(chef_resource)
+      if @processing_now.nil?
+        r_name = "#{chef_resource.resource_name}[#{chef_resource.name}]"
+        debug("The event :#{@current_event} on '#{r_name}' is out of bound and will be ignored.")
+        @previous_event = @current_event
+        @current_event = nil
+        true
+      else
+        false
       end
     end
 

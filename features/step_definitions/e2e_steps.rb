@@ -1,5 +1,12 @@
+Given("I load SousVide report at {string}") do |path|
+  expect(File).to exist(path)
+
+  @sous_vide_report ||= JSON.parse(File.read(path)).sort_by do |hash|
+    hash["chef_resource_order"]
+  end
+end
+
 When("I inspect event {string} at {string} phase") do |event_name, phase|
-  @sous_vide_report ||=JSON.parse(File.read("tmp/sous-vide-report.json"))
   @current_event = @sous_vide_report.find do |event|
     event["chef_resource"].start_with?(event_name) &&
       event["chef_resource_execution_phase"] == phase
@@ -11,8 +18,6 @@ When("I inspect event {string} at {string} phase") do |event_name, phase|
 end
 
 When("I inspect event at position {string}") do |position|
-  @sous_vide_report ||=JSON.parse(File.read("tmp/sous-vide-report.json"))
-
   @current_event = @sous_vide_report[position.to_i]
 end
 

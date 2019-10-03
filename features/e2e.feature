@@ -5,6 +5,8 @@ Feature: End to end tests
   Cucumber uses `tmp/sous-vide-report.json` file and it should be generated using
   `kitchen converge e2e` command.
 
+  Background:
+    Given I load SousVide report at "tmp/sous-vide-report.json"
 
   Scenario: events are captured immediately after sous_vide registration at compile-time
     # sous_vide can't see events before it's registration.
@@ -262,3 +264,64 @@ Feature: End to end tests
     When I inspect event "linux_user[nothing sous-user]" at "converge" phase
     Then current event "chef_resource_diff" is ""
     And current event "chef_resource_status" is "skipped"
+
+  # Nested resources
+  Scenario: nested resources are ordered correctly
+    # execute[e2e before nesting]
+    # sous_vide_e2e_sous_nest[e2e sous nesting]
+    # > execute[run_three action before]
+    # > sous_vide_e2e_sous_nest[call run_two]
+    # > > execute[run_two action before]
+    # > > sous_vide_e2e_sous_nest[call run_two]
+    # > > > execute[run_one action]
+    # > > execute[run_two action after]
+    # > execute[run_three action after]
+    # execute[e2e after nesting]
+
+    When I inspect event "execute[e2e before nesting]" at "converge" phase
+    Then current event "chef_resource_nest_level" is "0"
+    When I inspect next event
+    Then current event "chef_resource_name" is "e2e sous nesting"
+    Then current event "chef_resource_nest_level" is "0"
+    When I inspect next event
+    Then current event "chef_resource_name" is "run_three action before"
+    And current event "chef_resource_nest_level" is "1"
+    When I inspect next event
+    Then current event "chef_resource_name" is "call run_two"
+    And current event "chef_resource_nest_level" is "1"
+    When I inspect next event
+    Then current event "chef_resource_name" is "run_two action before"
+    And current event "chef_resource_nest_level" is "2"
+    When I inspect next event
+    Then current event "chef_resource_name" is "call run_two"
+    And current event "chef_resource_nest_level" is "2"
+    When I inspect next event
+    Then current event "chef_resource_name" is "run_one action"
+    And current event "chef_resource_nest_level" is "3"
+    When I inspect next event
+    Then current event "chef_resource_name" is "run_two action after"
+    And current event "chef_resource_nest_level" is "2"
+    When I inspect next event
+    Then current event "chef_resource_name" is "run_three action after"
+    And current event "chef_resource_nest_level" is "1"
+    When I inspect next event
+    Then current event "chef_resource_name" is "e2e after nesting"
+    And current event "chef_resource_nest_level" is "0"
+
+  Scenario: sub-resources in nested resources capture diffs
+    When I inspect event "file[e2e_sous_nest update file]" at "converge" phase
+    Then current event "chef_resource_diff" matches "-old content"
+    And current event "chef_resource_diff" matches "\+new content"
+    And current event "chef_resource_status" is "updated"
+
+  Scenario: parent resource status is "updated" when sub-resource is updated
+    When I inspect event "file[e2e_sous_nest update file]" at "converge" phase
+    Then current event "chef_resource_status" is "updated"
+    When I inspect event "sous_vide_e2e_sous_nest[update file]" at "converge" phase
+    Then current event "chef_resource_status" is "updated"
+
+  Scenario: parent resource status is "up-to-date" when sub-resource is up-to-date
+    When I inspect event "file[e2e_sous_nest up-to-date file]" at "converge" phase
+    Then current event "chef_resource_status" is "up-to-date"
+    When I inspect event "sous_vide_e2e_sous_nest[up-to-date file]" at "converge" phase
+    Then current event "chef_resource_status" is "up-to-date"

@@ -58,6 +58,10 @@ module CucumberContext
     sous_vide.resource_up_to_date(@chef_resource, @chef_resource.action)
   end
 
+  def resource_current_state_loaded
+    sous_vide.resource_current_state_loaded(@chef_resource, @chef_resource.action, nil)
+  end
+
   def resource_skipped
     sous_vide.resource_skipped(@chef_resource, @chef_resource.action, @chef_resource.guard)
   end

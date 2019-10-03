@@ -122,16 +122,14 @@ Feature: Event processing
   Scenario: nested resources processing
     When I have a chef resource "execute[/bin/true]" with action "run"
     And I call "resource_action_start"
-    # on execute[/bin/true]
+    And I call "resource_current_state_loaded"
     And I have a chef resource "execute[/bin/false]" with action "run"
     And I call "resource_action_start"
-    # on execute[/bin/false]
     And I call "resource_completed"
-    # on execute[/bin/false]
     And I have a chef resource "execute[/bin/true]" with action "run"
     And I call "resource_completed"
-    # on execute[/bin/true]
-    And there is "1" resources processed in total
+    And there is "2" resources processed in total
+    Then "resource_collection_cursor" should be "1"
 
   Scenario: out-of-bound events processing
     When I have a chef resource "execute[/bin/true]" with action "run"

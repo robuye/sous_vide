@@ -4,7 +4,6 @@ module SousVide
   #
   # @see https://www.rubydoc.info/gems/chef/Chef/Resource
   class TrackedResource
-
     attr_accessor :type
 
     attr_accessor :name
@@ -76,9 +75,8 @@ module SousVide
     # resource is skipped.
     attr_accessor :attributes_loaded
 
-    # Chef API resource. It is used for comparsion only.
-    # @api private
-    attr_accessor :chef_resource_handle
+    # Depth of a subresource (applies to nested resources only)
+    attr_accessor :nest_level
 
     def initialize(name:, action:, type:)
       @name = name
@@ -87,6 +85,7 @@ module SousVide
 
       @status = "unprocessed"
       @retries = 0
+      @nest_level = 0
     end
 
     # String and human friendly represtnation of the resource
@@ -112,6 +111,7 @@ module SousVide
         chef_resource_error_output: @error_output,
         chef_resource_error_source: @error_source,
         chef_resource_retries: @retries,
+        chef_resource_nest_level: @nest_level.to_i,
         chef_resource_notified_by: @notifying_resource,
         chef_resource_notified_via: @notification_type,
         chef_resource_before_notifications: @before_notifications,

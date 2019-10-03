@@ -16,8 +16,9 @@ module SousVide
         log "Processing #{resources_data.size} resources."
         log ""
 
-        resources_data.each do |tracked|
-          log("#{tracked.execution_order}.", tracked.to_s, tracked.status,
+        resources_data.sort_by(&:execution_order).each do |tracked|
+          padding = "> " * tracked.nest_level
+          log("#{padding}#{tracked.execution_order}.", tracked.to_s, tracked.status,
               "(#{tracked.duration_ms.to_i} ms)", tracked.execution_phase)
         end
 

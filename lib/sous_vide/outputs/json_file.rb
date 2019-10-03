@@ -22,7 +22,7 @@ module SousVide
         log ""
         log "Processing #{resources_data.size} resources."
 
-        json_data = resources_data.map do |tracked|
+        json_data = resources_data.sort_by(&:execution_order).map do |tracked|
           tracked.to_h.
             merge(node_data).
             merge(run_data)

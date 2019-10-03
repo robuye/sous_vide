@@ -35,7 +35,7 @@ module SousVide
         log "Processing #{resources_data.size} resources."
         log "Target: #{@endpoint.to_s}"
 
-        resources_data.each do |tracked|
+        resources_data.sort_by(&:execution_order).each do |tracked|
           _path = @endpoint.path == "" ? "/" : @endpoint.path
           post_request = Net::HTTP::Post.new(_path, "Content-Type" => "application/json")
 

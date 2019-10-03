@@ -1,5 +1,3 @@
-include_recipe "sous_vide::install"
-
 package "ntp"
 service "ntp" do
   action [:enable, :start]

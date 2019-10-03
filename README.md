@@ -1,42 +1,33 @@
 # SousVide for Chef
 
-**=======> SousVide is not ready to use. <=======**
+SousVide is a simple & dependency free Chef Handler that hooks into `Chef::EventDispatch` and collects event data from `chef-client`. These events will produce "execution units" (often more than one per declared resource) to provide insight into why and how a Chef resource was converged. Data emmited by SousVide includes:
 
-
-![SousVide example dashboard](media/kibana-dashboard.png?raw=true)
-
-SousVide is a Chef Handler you can use to collect & visualize `chef-client` converge process. It receives event data from `chef-client` and keeps track of the converge process. It's essentially a stream parser hooked into `Chef::EventDispatch`.
-
-At the end you will have an extensive report about events occurred during the run.
-
-Here's what SousVide will tell you:
-
-* time spent on a resource in ms
-* source location of a tracked resource (`cookbook::recipe`)
+* time spent on a resource in milliseconds
+* source location
 * real execution order
-  - takes into account notifications and multiple executions
-* better execution status
-  - detects why-run used with :before notifications
-  - is aware of 'unprocessed' resources
-* better execution phase
-  - adds 'delayed' and 'post-converge' custom phases
-* better errors for retriable and ignorable resources
-  - last error is always captured, even if the resource succeed on retry
+    * takes into account notifications and multiple executions
+* extended execution status
+    * detects why-run used with :before notifications
+    * is aware of 'unprocessed' resources
+* extended execution phase
+    * adds 'delayed' and 'post-converge' custom phases
+* errors for retriable and ignorable resources
+    * last error is always captured, even if the execution succeed on retry
 * guards details (only_if & not_if) when a resource was skipped
-* more data about notifications
-  - simple counters for each type
-  - notification type & notifying resource when available
+* additional data about notifications
+    * simple counters for each type
+    * notification type & notifying resource when available
 * resource diffs
-  - file diff provided by Chef
-  - it's own service, package & user resources diff
+    * file diffs as provided by Chef
+        * respects sensitive option
+    * custom service, package & user resources diffs
+        * always captured, even when there were no changes
 
-All this and more will be available in a flat JSON data structure.
-
-Feed it to Kibana, save to file or print at the end of chef-client run. `SousVide` comes with common outputs (see `SousVide::Outputs`) but you can write your own or even pass it a Proc.
+All this will be available in a flat JSON-friendly data structure at the end of `chef-client` run. Feed it to Kibana, save to file, print to Chef logs or be creative and pass your own Ruby `Proc`.
 
 ## Installation & Usage
 
-Add to your recipe:
+Add the following snippet to your recipe:
 
 ```ruby
 chef_gem "chef_sous_vide" do
@@ -52,59 +43,42 @@ ruby_block "register sous handler" do
 end.run_action(:run)
 ```
 
-You should add these lines as early as possible. SousVide will not detect compile-time executions before it's registration, but otherwise it will work just fine (or just as one would expect).
+Consider adding these lines as early as possible. SousVide will not detect compile-time executions before it's registration, but otherwise it will work just fine (or just as one would expect).
 
-In default configuration the report will be sent to `Chef::Log` at `INFO` level. `chef-client` will not print it to stdout if executed from a terminal (`log_level :auto`), it will be printed to the log file only.
+In default configuration the report will be sent to `Chef::Log` at `INFO` level:
 
-## Outputs & Configuration
+```text
+=============== SousVide::Outputs::Logger ===============
 
-Once SousVide is registered, it's for the most part up to you to consume the output. `JsonHTTP` will probably be the most useful, the structure looks like this:
+Processing 79 resources.
 
-```json
-[
-  {
-    "chef_resource": "service[start ntp]#start",
-    "chef_resource_id": "ntp",
-    "chef_resource_name": "start ntp",
-    "chef_resource_type": "service",
-    "chef_resource_cookbook": "sous_vide",
-    "chef_resource_recipe": "e2e",
-    "chef_resource_action": "start",
-    "chef_resource_guard": null,
-    "chef_resource_diff": "Running: no. Wants yes.",
-    "chef_resource_duration_ms": 20,
-    "chef_resource_error_output": null,
-    "chef_resource_error_source": null,
-    "chef_resource_retries": 0,
-    "chef_resource_notified_by": null,
-    "chef_resource_notified_via": null,
-    "chef_resource_before_notifications": 0,
-    "chef_resource_immediate_notifications": 0,
-    "chef_resource_delayed_notifications": 0,
-    "chef_resource_order": 51,
-    "chef_resource_execution_phase": "converge",
-    "chef_resource_started_at": "2019-09-27 13:08:46",
-    "chef_resource_completed_at": "2019-09-27 13:08:46",
-    "chef_resource_status": "updated",
-    "chef_node_ipv4": "<no ip>",
-    "chef_node_instance_id": "e2e-ubuntu-1804",
-    "chef_node_role": "e2e",
-    "chef_run_id": "22b38923",
-    "chef_run_name": "2019-09-27 13:08:04 e2e <no ip> 22b38923",
-    "chef_run_started_at": "2019-09-27 13:08:04",
-    "chef_run_completed_at": "2019-09-27 13:08:48",
-    "chef_run_success": true
-  }
-]
+1. execute[compile-time immediately after register sous handler]#run updated (15 ms) compile
+2. execute[build local sous_vide gem]#nothing skipped (0 ms) converge
+3. execute[install local sous_vide gem]#nothing skipped (0 ms) converge
+...
+78. cookbook_file[/usr/share/kibana/sous_vide.json]#create up-to-date (7 ms) converge
+79. execute[import dashboard to kibana]#nothing skipped (0 ms) converge
+
+Node info:
+
+Name: default-ubuntu-1604
+IP Address: 172.17.0.2
+Role: elasticsearch
+
+Run info:
+
+ID: fed2a14d
+Started at: 2019-10-05 09:41:35
+Completed at: 2019-10-05 09:41:37
+Success: true
 ```
 
-Example configuration for JsonHTTP:
+## Example configurations & outputs
+
+
+Example configuration for `JsonHTTP`:
 
 ```ruby
-chef_gem "chef_sous_vide" do
-  action :install
-end
-
 ruby_block "register sous handler" do
   block do
     require "sous_vide"
@@ -116,59 +90,152 @@ ruby_block "register sous handler" do
 end.run_action(:run)
 ```
 
-Open `cookbooks/sous_vide/recipes/install.rb` to see how to configure other outputs or use more than one.
-
-SousVide output can be any object that responds to `call` method (a simple proc is valid too) with the following parameters:
+Example configuration for `JsonFile`:
 
 ```ruby
-def call(run_data:, node_data:, resources_data:)
+ruby_block "register sous handler" do
+  block do
+    require "sous_vide"
+    json_file = SousVide::Outputs::JsonFile.new(directory: "/opt/chef", file_name: "sous-report.json")
+    SousVide.sous_output = json_file
+    SousVide.register(node.run_context)
+  end
+  action :nothing
+end.run_action(:run)
+```
+
+Example configuration for multiple outputs:
+
+```ruby
+ruby_block "register sous handler" do
+  block do
+    require "sous_vide"
+    json_http = SousVide::Outputs::JsonHTTP.new(url: "http://elasticsearch:3000")
+    json_file = SousVide::Outputs::JsonFile.new(directory: "/opt/chef", file_name: "sous-report.json")
+    chef_logs = SousVide::Outputs::Logger.new
+    proc_out = proc {|run_data:, node_data:, resources_data:| puts run_data.inspect }
+    multi = SousVide::Outputs::Multi.new(json_http, json_file, chef_logs, proc_out)
+    SousVide.sous_output = json_file
+    SousVide.register(node.run_context)
+  end
+  action :nothing
+end.run_action(:run)
+```
+
+SousVide output can be any object that responds to `call` method (such as Ruby `Proc`) with the following parameters:
+
+```ruby
+class CustomOutput
+  def call(run_data:, node_data:, resources_data:)
+    # ... something interesting
+  end
+end
+
+Proc.new do |run_data:, node_data:, resources_data:|
   # ... something interesting
 end
 ```
 
+## Feature highlights
+
 ### Resource diffs
 
 Package diff (install action):
+
 ```
-    Packages: sous-package-one, sous-package-two, sous-package-three
-    Current versions: 0.0.1, 0.0.2, 0.0.2
-    Wanted versions: 0.0.2, 0.0.2, any
+Packages: sous-package-one, sous-package-two, sous-package-three
+Current versions: 0.0.1, 0.0.2, 0.0.2
+Wanted versions: 0.0.2, 0.0.2, any
 ```
 
 Service diff (stop action):
+
 ```
-    Running: yes. Wants no.
+Running: yes. Wants no.
 ```
 
 Service diff (enable action):
+
 ```
-    Enabled: yes. Wants yes.
+Enabled: yes. Wants yes.
 ```
 
 User diff (manage action):
+
 ```
-    Username: sous-user
+Username: sous-user
 
-    User will be updated.
+User will be updated.
 
-    Current attributes:
+Current attributes:
 
-    UID:      12345
-    GID:      12345
-    Home:     /home/sous-user
-    Shell:    /bin/bash
-    Comment:  Modified user comment
+UID:      12345
+GID:      12345
+Home:     /home/sous-user
+Shell:    /bin/bash
+Comment:  Modified user comment
 
-    Chef attributes:
+Chef attributes:
 
-    UID:
-    GID:
-    Home:
-    Shell:
-    Comment:  Managed user comment
+UID:
+GID:
+Home:
+Shell:
+Comment:  Managed user comment
 ```
 
-## Demo
+### Nested resources
+
+Given example `mysql_service` definition:
+
+```ruby
+mysql_service 'foo' do
+  port '3306'
+  version '5.7'
+  initial_root_password 'change me'
+  action [:create, :start]
+end
+```
+
+SousVide will produce the following report:
+
+```text
+9. mysql_service[foo]#create updated (44220 ms) converge
+> 10. mysql_server_installation_package[foo]#install updated (35640 ms) converge
+> > 11. apt_package[mysql-server-5.7]#install updated (35628 ms) converge
+> > 12. apt_package[perl-Sys-Hostname-Long]#nothing skipped (1 ms) converge
+> > 13. execute[Initial DB setup script]#nothing skipped (1 ms) converge
+> 14. mysql_service_manager_upstart[foo]#create updated (8562 ms) converge
+> > 15. group[mysql]#create up-to-date (2 ms) converge
+> > 16. linux_user[mysql]#create up-to-date (2 ms) converge
+> > 17. service[mysql]#stop up-to-date (19 ms) converge
+> > 18. service[mysql]#disable updated (33 ms) converge
+> > 19. file[/etc/mysql/my.cnf]#delete updated (4 ms) converge
+> > 20. file[/etc/my.cnf]#delete up-to-date (1 ms) converge
+> > 21. link[/usr/share/my-default.cnf]#create updated (2 ms) converge
+> > 22. directory[/etc/mysql-foo]#create updated (10 ms) converge
+> > 23. directory[/etc/mysql-foo/conf.d]#create updated (7 ms) converge
+> > 24. directory[/run/mysql-foo]#create updated (5 ms) converge
+> > 25. directory[/var/log/mysql-foo]#create updated (5 ms) converge
+> > 26. directory[/var/lib/mysql-foo]#create updated (4 ms) converge
+> > 27. template[/etc/mysql-foo/my.cnf]#create updated (9 ms) converge
+> > 28. bash[foo initial records]#run updated (8409 ms) converge
+29. mysql_service[foo]#start updated (94 ms) converge
+> 30. mysql_service_manager_upstart[foo]#start updated (88 ms) converge
+> > 31. template[/usr/sbin/mysql-foo-wait-ready]#create updated (18 ms) converge
+> > 32. template[/etc/init/mysql-foo.conf]#create updated (28 ms) converge
+> > 33. service[mysql-foo]#start updated (35 ms) converge
+```
+
+### Kibana dashboard
+
+![SousVide example dashboard](media/kibana-dashboard.png?raw=true)
+
+### Asciicast
+
+[![asciicast](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX.svg)](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX)
+
+## Local setup with Kitchen & Docker
 
 This repository comes with `kitchen` setup you can use out of the box to see SousVide in action.
 
@@ -178,13 +245,20 @@ Once `chef-client` finishes converging you can access a Kibana dashboard and see
 
 There are more example kitchen configurations you can converge and see the runs in Kibana. You can change the default recipe, converge again and see it in Kibana.
 
-[![asciicast](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX.svg)](https://asciinema.org/a/RerbmOQ5FzZisOM312zarxcYX)
+### Running tests
+
+SousVide is tested with Kitchen & Cucumber. To run the test suite locally run:
+
+* run `bundle exec kitchen converge e2e`
+* run `bundle exec cucumber`
+
+Kitchen will generate a JSON file (standard `JsonFile` output) that will be later used by Cucumber.
 
 ## Contributing
 
 Bug reports, suggestions and pull requests are welcome on GitHub.
 
-More and better kitchen (longer, more real-world) suites or dashboard improvements will be greatly appreciated.
+More and better kitchen (longer, more real-world) suites or dashboard improvements are welcome.
 
 ## License
 

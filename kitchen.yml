@@ -44,7 +44,8 @@ suites:
       cap_add:
         - IPC_LOCK
     run_list:
-      - sous_vide::install
+      - sous_vide::build
+      - sous_vide::register
       - sous_vide::default
     attributes:
       kitchen:
@@ -68,7 +69,8 @@ suites:
       links:
         - elasticsearch
     run_list:
-      - sous_vide::install
+      - sous_vide::build
+      - sous_vide::register
       - sous_vide::tomcat
     attributes:
       kitchen:
@@ -83,7 +85,8 @@ suites:
     includes:
       - ubuntu-16.04
     run_list:
-      - sous_vide::install
+      - sous_vide::build
+      - sous_vide::register
       - sous_vide::nginx
     attributes:
       kitchen:
@@ -116,4 +119,6 @@ suites:
           - e2e
     run_list:
       - sous_vide::build
+      - sous_vide::register
       - sous_vide::e2e
+      - sous_vide::e2e_nesting
