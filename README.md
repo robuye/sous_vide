@@ -104,6 +104,20 @@ ruby_block "register sous handler" do
 end.run_action(:run)
 ```
 
+Example configuration for `Graphviz`:
+
+```ruby
+ruby_block "register sous handler" do
+  block do
+    require "sous_vide"
+    graphviz = SousVide::Outputs::Graphviz.new(directory: "/opt/chef", file_name: "sous-report.dot")
+    SousVide.sous_output = graphviz
+    SousVide.register(node.run_context)
+  end
+  action :nothing
+end.run_action(:run)
+```
+
 Example configuration for multiple outputs:
 
 ```ruby
@@ -226,6 +240,12 @@ SousVide will produce the following report:
 > > 32. template[/etc/init/mysql-foo.conf]#create updated (28 ms) converge
 > > 33. service[mysql-foo]#start updated (35 ms) converge
 ```
+
+### Graphviz
+
+Using `Graphviz` output SousVide can produce a `dot` file that can be used to visualize a `chef-client` run. Click [here](https://gist.github.com/robuye/6d6e5bf470337a51cb33139b102a188e) to see a full graph.
+
+![image](https://user-images.githubusercontent.com/853568/69551589-39aad300-0f9d-11ea-8a95-29455ac0957a.png)
 
 ### Kibana dashboard
 

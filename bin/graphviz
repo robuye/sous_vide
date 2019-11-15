@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "json"
+require "sous_vide"
+
+if ARGV.length.zero?
+  STDERR.puts "Usage: bin/graphviz <sous-vide-input-report.json> <sous-vide-report.dot>"
+  exit 1
+end
+
+input_file = File.read(ARGV[0])
+input_json = JSON.parse(input_file, symbolize_names: true)
+
+output_file = ARGV[1] || "sous-vide-report.dot"
+output_path = File.expand_path(output_file)
+
+graph = SousVide::Outputs::Graphviz::Graph.new
+
+input_json.sort_by do |chef_attributes|
+  chef_attributes[:chef_resource_order]
+end.each do |chef_attributes|
+  graph.add_node_from_chef_event(chef_attributes)
+end
+
+File.write(output_path, graph.render)
+
+puts "The output has been written to '#{output_path}'."

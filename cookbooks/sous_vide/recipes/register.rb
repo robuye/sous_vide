@@ -26,13 +26,14 @@ ruby_block "register sous handler" do
 
     json = SousVide::Outputs::JsonFile.new(logger: logger, directory: "/sous_vide/tmp")
     stdout = SousVide::Outputs::Logger.new(logger: logger)
+    graphviz = SousVide::Outputs::Graphviz.new(logger: logger, directory: "/sous_vide/tmp")
 
     # Do not send e2e output to Elasticsearch
     if node["kitchen"]["roles"].include?("e2e")
-      multi = SousVide::Outputs::Multi.new(json, stdout)
+      multi = SousVide::Outputs::Multi.new(json, stdout, graphviz)
     else
       es = SousVide::Outputs::JsonHTTP.new(url: "http://elasticsearch:3000", max_retries: 2, logger: logger)
-      multi = SousVide::Outputs::Multi.new(json, stdout, es)
+      multi = SousVide::Outputs::Multi.new(json, stdout, graphviz, es)
     end
 
     SousVide.sous_output = multi
