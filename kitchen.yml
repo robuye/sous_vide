@@ -109,6 +109,21 @@ suites:
           - nginx::ngx_lua_module
           - nginx::openssl_source
           - nginx::upload_progress_module
+  - name: mysql
+    driver:
+      links:
+        - elasticsearch
+    includes:
+      - ubuntu-18.04
+    run_list:
+      - sous_vide::build
+      - sous_vide::register
+      - sous_vide::mysql
+    attributes:
+      kitchen:
+        roles:
+          - mysql-example
+
   # For e2e tests
   - name: e2e
     includes:
