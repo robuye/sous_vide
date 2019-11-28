@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+require "json"
+require "sous_vide"
+
+if ARGV.length.zero?
+  STDERR.puts <<~EOS
+    Usage:
+
+      bin/flamegraph <sous-vide-input-report.json> <sous-vide-report.flame>
+
+    Once the file is generated use flamegraph.pl script to build a graph. Example:
+
+      flamegraph.pl sous-vide-report.flame --countname ms --cp --width 5000 > graph.svg
+
+    The `--cp` flag will cause flamegraph to use color palette defined in `palette.map` so
+    all entries will be color-coded based on execution status ('updated', 'skipped', ...).
+
+    See https://github.com/brendangregg/FlameGraph to learn more about flamegraphs.
+  EOS
+  exit 1
+end
+
+input_file = File.read(ARGV[0])
+input_json = JSON.parse(input_file, symbolize_names: true)
+
+output_file = ARGV[1] || "sous-vide-report.flame"
+output_path = File.expand_path(output_file)
+
+palette_path = File.join(File.dirname(output_file), "palette.map")
+
+graph = SousVide::Outputs::Flamegraph::Graph.new
+
+input_json.sort_by do |chef_attributes|
+  chef_attributes[:chef_resource_order]
+end.each do |chef_attributes|
+  graph.add_node_from_chef_event(chef_attributes)
+end
+
+File.write(output_path, graph.render)
+puts "The output has been written to '#{output_path}'."
+
+File.write(palette_path, graph.palette)
+puts "The palette has been written to '#{palette_path}'."

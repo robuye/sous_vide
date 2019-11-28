@@ -1,13 +1,17 @@
-Given("I have the following input events:") do |table|
+Given("I have the following Graphviz input events:") do |table|
+  table.map_column!(:depth) {|value| Integer(value) }
+  table.map_column!(:order) {|value| Integer(value) }
+
   @graph_input = table.hashes.map do |attributes|
     node = SousVide::Outputs::Graphviz::Node.new
-    node.depth = attributes['depth'].to_i
-    node.order = attributes['order']
+    attributes.each do |(k,v)|
+      node.public_send("#{k}=", v)
+    end
     node
   end
 end
 
-When("I build a graph") do
+When("I build a Graphviz graph") do
   @graph = SousVide::Outputs::Graphviz::Graph.new
   @graph_input.each do |node|
     @graph.add_node(node)
@@ -15,7 +19,7 @@ When("I build a graph") do
   @graph.build_edges!
 end
 
-Then("I should have the following edges:") do |table|
+Then("I should have the following Graphviz output:") do |table|
   table.rows.flatten.each do |edge|
     expect(@graph.edges).to include(edge)
   end
